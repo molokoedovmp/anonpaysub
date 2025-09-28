@@ -1,0 +1,8 @@
+{$DOMAIN}, www.{$DOMAIN} {
+    encode gzip zstd
+    reverse_proxy web:3000
+    @health {
+        path /healthz
+    }
+    respond @health 200
+}

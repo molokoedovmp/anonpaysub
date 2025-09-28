@@ -1,0 +1,20 @@
+# Node
+node_modules/
+.next/
+*.log
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+*.pyc
+
+# OS
+.DS_Store
+
+# Docker
+*.pid
+
