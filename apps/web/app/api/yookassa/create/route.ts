@@ -19,7 +19,16 @@ export async function POST(req: NextRequest) {
     const months = monthsMap[order?.plan] ?? 1
     const usd = Math.max(0, Number(order?.monthlyPriceUsd || order?.price || 0)) * months
     if (!usd) return NextResponse.json({ error: 'Некорректная сумма' }, { status: 400 })
-    const rate = await fetchUsdRubRate()
+    // Получаем курс: сначала пытаемся взять из заказа (если пришёл с клиента),
+    // затем онлайн‑провайдеры; на крайний случай — дефолт 100.
+    let rate = Number(order?.calc?.usdToRub || order?.usdToRub || 0)
+    if (!Number.isFinite(rate) || rate <= 0) {
+      try {
+        rate = await fetchUsdRubRate()
+      } catch {
+        rate = Number(process.env.DEFAULT_FX_RUB || '100') // безопасный запасной вариант
+      }
+    }
     const totalRub = calcRubPrice(usd, { fx: rate })
 
     const metadata: Record<string, any> = {
@@ -84,17 +93,25 @@ export async function POST(req: NextRequest) {
     if (process.env.YOOKASSA_TEST_MODE === '1') payload.test = true
 
     const idem = crypto.randomUUID()
-    const res = await fetch('https://api.yookassa.ru/v3/payments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotence-Key': idem,
-        Authorization: 'Basic ' + Buffer.from(`${shopId}:${key}`).toString('base64')
-      },
-      body: JSON.stringify(payload)
-    })
-    const data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data?.description || 'Ошибка ЮKassa' }, { status: 502 })
+    let data: any = {}
+    try {
+      const res = await fetch('https://api.yookassa.ru/v3/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotence-Key': idem,
+          Authorization: 'Basic ' + Buffer.from(`${shopId}:${key}`).toString('base64')
+        },
+        body: JSON.stringify(payload)
+      })
+      data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        return NextResponse.json({ error: data?.description || 'Ошибка ЮKassa' }, { status: 502 })
+      }
+    } catch (e: any) {
+      // Сетевой сбой до ЮKassa → отдаём понятную ошибку клиенту
+      return NextResponse.json({ error: e?.message || 'Не удалось связаться с ЮKassa' }, { status: 502 })
+    }
 
     return NextResponse.json({ paymentId: data?.id, confirmationUrl: data?.confirmation?.confirmation_url })
   } catch (e: any) {
