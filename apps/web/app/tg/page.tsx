@@ -43,7 +43,7 @@ export default function TgPage() {
   const [initData, setInitData] = useState<string>('')
   const [step, setStep] = useState<'info' | 'price' | 'confirm' | 'success'>('info')
   const [order, setOrder] = useState<Order>({
-    service: 'ChatGpt',
+    service: '',
     login: '',
     password: '',
     creatorUrl: '',
@@ -494,6 +494,7 @@ export default function TgPage() {
             <label>Сервис</label>
             <div className="service-input">
               <input
+                placeholder="Название сервиса" 
                 list="service-suggestions"
                 value={order.service}
                 onChange={(e) => setOrder(o => ({ ...o, service: e.target.value }))}
@@ -628,7 +629,7 @@ export default function TgPage() {
 
           <div className="payment-options">
             {[
-              { value: 'crypto', label: 'Оплата через Telegram ⭐️', description: 'Быстрая оплата звездами внутри Telegram' },
+              // { value: 'crypto', label: 'Оплата через Telegram ⭐️', description: 'Быстрая оплата звездами внутри Telegram' },
               { value: 'yookassa', label: 'Оплата через ЮKassa', description: 'Оплата банковской картой' },
             ].map((opt) => (
               <button
