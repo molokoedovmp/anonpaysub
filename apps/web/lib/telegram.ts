@@ -78,19 +78,20 @@ export function formatOrderMessage(
     `Цена/мес: ${order.monthlyPriceUsd} USD`,
     `Расчёт (курс ${usdToRub.toFixed(2)}₽): база ${baseRub.toFixed(0)}₽ + комиссия ${(commissionPct*100).toFixed(0)}% → ${commissionRub.toFixed(0)}₽`,
     `Итого к оплате: ${totalRub.toFixed(0)}₽`,
-    ...(order.paymentMethod ? [`Оплата: ${order.paymentMethod}`] : []),
+    ...(order.paymentMethod ? [`Оплата: ${order.paymentMethod === 'crypto' ? 'Telegram Pay' : order.paymentMethod === 'yookassa' ? 'ЮKassa' : order.paymentMethod}`] : []),
     ...(order.txHash ? [`TX: ${order.txHash}`] : []),
     ...(order.notes ? [`Примечание: ${order.notes}`] : [])
   ]
   return lines.join('\n')
 }
 
-export async function sendTelegramMessage(botToken: string, chatId: string, text: string) {
+export async function sendTelegramMessage(botToken: string, chatId: string, payload: string | Record<string, any>) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`
+  const body = typeof payload === 'string' ? { chat_id: chatId, text: payload } : { chat_id: chatId, ...payload }
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text })
+    body: JSON.stringify(body)
   })
   if (!res.ok) {
     const msg = await res.text()

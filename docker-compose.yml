@@ -3,7 +3,6 @@ services:
     build:
       context: ./apps/web
     env_file:
-      - ./apps/web/.env.example
       - ./.env
     ports:
       - "3000:3000"
@@ -16,7 +15,6 @@ services:
     build:
       context: ./apps/bot
     env_file:
-      - ./apps/bot/.env.example
       - ./.env
     volumes:
       - ./apps/bot:/app

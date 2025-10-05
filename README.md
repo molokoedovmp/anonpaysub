@@ -14,27 +14,68 @@ Important: Do NOT collect user passwords for third‑party services. Prefer OAut
 
 ## Features (scaffolded)
 - Launch mini app via Telegram `WebApp` button
-- Render service selection + order details
+- Multi-step mini app: ввод данных → расчёт → подтверждение → успешная анимация
 - Verify Telegram `initData` HMAC in API using `BOT_TOKEN`
 - Forward orders to `ADMIN_CHAT_ID` via Telegram sendMessage
+- Chat-based order wizard inside the bot (без WebApp) с пошаговым опросом пользователя
 - Pluggable payment provider stub (e.g., Crypto Pay, TON, USDT). Not implemented — replace stub with your provider.
 
 ## Quick start (dev)
-1. Copy env
-   - `cp .env.example .env`
-   - `cp apps/web/.env.example apps/web/.env.local`
-   - `cp apps/bot/.env.example apps/bot/.env`
-2. Fill these vars:
-   - `BOT_TOKEN`: BotFather token
-   - `ADMIN_CHAT_ID`: Your Telegram ID or target chat ID
-   - `NEXT_PUBLIC_WEBAPP_URL`: Public URL for the mini app (e.g., `https://your-host/tg` in prod; `http://localhost:3000/tg` for local)
-   - `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`: `@your_bot`
-   - `ALLOW_DEV_NO_INITDATA=1` (optional) — разрешает оформлять заказы при тестировании вне Telegram WebApp (для `localhost` эта опция включается автоматически)
+1. Create .env file in project root with required variables:
+   ```bash
+   # Создайте файл .env в корне проекта
+   touch .env
+   ```
+2. Fill these REQUIRED vars in .env:
+   - `BOT_TOKEN`: BotFather token (ОБЯЗАТЕЛЬНО)
+   - `ADMIN_CHAT_ID`: Your Telegram ID or target chat ID (ОБЯЗАТЕЛЬНО)
+   - `YOOKASSA_SHOP_ID`: YooKassa Shop ID (ОБЯЗАТЕЛЬНО для оплаты)
+   - `YOOKASSA_KEY`: YooKassa Secret Key (ОБЯЗАТЕЛЬНО для оплаты)
+   
+   Optional vars:
+   - `NEXT_PUBLIC_WEBAPP_URL`: Public URL for the mini app (default: `http://localhost:3000/tg`)
+   - `PAYMENTS_API_BASE`: Base URL for bot API calls (default: `http://localhost:3000`)
+   - `YOOKASSA_TEST_MODE`: `1` for test mode, `0` for production
+   - `ALLOW_DEV_NO_INITDATA`: `1` to allow testing outside Telegram WebApp
+   - `NEXT_PUBLIC_PAYMENT_SLUG`: Telegram Payments slug for crypto payments
+   - `START_CARD_IMAGE_URL`: Image for bot start card
 3. Run locally
    - With Docker: `docker compose up --build`
    - Or manually:
      - Web: `cd apps/web && npm i && npm run dev`
      - Bot: `cd apps/bot && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && python main.py`
+   - В боте используйте `/start`: появится карточка с двумя вариантами — мини‑приложение (WebApp) и оформление в чате. Для отмены диалога в чате есть команда `/cancel`.
+
+## Troubleshooting
+
+### Проблема: "All connection attempts failed" в боте
+**Решение**: Убедитесь, что в .env файле правильно указан `PAYMENTS_API_BASE`. Для Docker используйте `http://web:3000`, для локальной разработки `http://localhost:3000`.
+
+### Проблема: Ссылка ЮKassa не открывается в веб-приложении
+**Решение**: Это нормальное поведение в некоторых версиях Telegram. Ссылка появится внизу страницы - нажмите на неё для перехода к оплате.
+
+### Проблема: После оплаты ничего не происходит
+**Решение**: 
+1. Проверьте, что все обязательные переменные окружения установлены
+2. Откройте консоль браузера (F12) и посмотрите на логи
+3. Убедитесь, что `ADMIN_CHAT_ID` указан правильно
+4. Проверьте, что бот может отправлять сообщения в указанный чат
+
+### Проблема: Бот не может подключиться к веб-приложению
+**Решение**: В Docker окружении бот должен обращаться к сервису `web`, а не `localhost`. Убедитесь, что `PAYMENTS_API_BASE=http://web:3000` в .env файле.
+
+### Проблема: Переменные окружения не загружаются
+**Решение**: 
+1. Убедитесь, что файл `.env` находится в корне проекта (рядом с docker-compose.yml)
+2. Перезапустите Docker: `docker compose down && docker compose up --build`
+3. Проверьте логи: `docker compose logs bot` и `docker compose logs web`
+
+### Отладка
+Для отладки откройте консоль браузера (F12) и посмотрите на логи. В коде добавлена подробная отладочная информация для:
+- Создания платежей ЮKassa
+- Проверки статуса оплаты
+- Уведомлений менеджера
+- Ошибок подключения
 
 ## Telegram setup
 - Create bot in BotFather
