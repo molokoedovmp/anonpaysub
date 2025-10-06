@@ -3,6 +3,8 @@ import { Buffer } from 'buffer'
 import crypto from 'crypto'
 import { sendTelegramMessage } from '@/lib/telegram'
 
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
   try {
     const shopId = process.env.YOOKASSA_SHOP_ID

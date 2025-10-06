@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Buffer } from 'buffer'
 import crypto from 'crypto'
 
+export const runtime = 'nodejs'
+
 export async function GET(_req: NextRequest, { params }: { params: { paymentId: string } }) {
   try {
     const key = process.env.YOOKASSA_KEY
