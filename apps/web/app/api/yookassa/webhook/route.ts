@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       if (md.userId) {
         const userMsg = (
           '✅ Оплата получена!\n' +
-          'В течение 15–60 минут мы оформим подписку. Если будут вопросы — просто ответьте в этом чате.'
+          'В течение 15–60 минут мы оформим подписку. Если будут вопросы пишите в поддержку.'
         )
         await sendTelegramMessage(botToken, String(md.userId), userMsg)
       }

@@ -90,12 +90,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Некорректный return_url', hint: 'Проверьте NEXT_PUBLIC_WEBAPP_URL или DOMAIN' }, { status: 400 })
     }
 
+    // Build receipt (чек) — обязателен в проде у ряда мерчантов
+    // Не добавляем новые env: используем безопасные дефолты и данные заказа
+    const vatCode = Number(process.env.YOOKASSA_VAT_CODE || 6) || 6 // 6 = без НДС
+    const taxSystem = Number(process.env.YOOKASSA_TAX_SYSTEM_CODE || 1) || 1 // 1 = ОСН, скорректируйте при необходимости
+    const toEmail = (v: any) => {
+      const s = String(v || '').trim()
+      return /.+@.+\..+/.test(s) ? s : ''
+    }
+    const toPhone = (v: any) => {
+      const s = String(v || '').replace(/[^0-9+]/g, '')
+      // Допустимы 10-15 цифр, допускаем ведущий +
+      if (/^\+?\d{10,15}$/.test(s)) return s
+      return ''
+    }
+    const customerEmail = toEmail(order?.login) || toEmail(process.env.YOOKASSA_RECEIPT_EMAIL)
+    const customerPhone = customerEmail ? '' : (toPhone(order?.login) || toPhone(process.env.YOOKASSA_RECEIPT_PHONE))
+
+    const receipt: any = {
+      items: [
+        {
+          description,
+          amount: { value: totalRub.toFixed(2), currency: 'RUB' },
+          quantity: '1.00',
+          vat_code: vatCode,
+          payment_subject: 'service',
+          payment_mode: 'full_prepayment'
+        }
+      ],
+      tax_system_code: taxSystem
+    }
+    if (customerEmail || customerPhone) {
+      receipt.customer = {}
+      if (customerEmail) receipt.customer.email = customerEmail
+      if (customerPhone) receipt.customer.phone = customerPhone
+    }
+
     const payload: any = {
       amount: { value: totalRub.toFixed(2), currency: 'RUB' },
       capture: true,
       description,
       metadata,
-      confirmation: { type: 'redirect', return_url: returnUrl }
+      confirmation: { type: 'redirect', return_url: returnUrl },
+      receipt
     }
 
     // Чек отключён по требованию: не отправляем receipt вообще
@@ -119,6 +156,7 @@ export async function POST(req: NextRequest) {
         base.description = description
         base.amount = payload?.amount?.value
         base.metadataKeys = Object.keys(metadata)
+        base.receipt = { hasCustomer: !!receipt?.customer, vat_code: vatCode, tax_system_code: taxSystem }
         base.yoo = e?.yoo || null
         if (undiciCode) base.causeCode = undiciCode
       }
