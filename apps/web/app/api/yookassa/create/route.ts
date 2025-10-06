@@ -80,6 +80,15 @@ export async function POST(req: NextRequest) {
       return 'https://t.me'
     }
     const returnUrl = computeReturnUrl()
+    // Validate return_url to avoid opaque YooKassa errors
+    try {
+      const u = new URL(returnUrl)
+      if (u.protocol !== 'https:') {
+        return NextResponse.json({ error: 'Некорректный return_url: требуется HTTPS', hint: 'Укажите NEXT_PUBLIC_WEBAPP_URL или DOMAIN с https-схемой' }, { status: 400 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Некорректный return_url', hint: 'Проверьте NEXT_PUBLIC_WEBAPP_URL или DOMAIN' }, { status: 400 })
+    }
 
     const payload: any = {
       amount: { value: totalRub.toFixed(2), currency: 'RUB' },

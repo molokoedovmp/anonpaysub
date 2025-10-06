@@ -1,6 +1,7 @@
 export default function Home() {
   const webappUrl = process.env.NEXT_PUBLIC_WEBAPP_URL || '/tg'
-  const bot = ('https://t.me/AnonPaySubBot' )
+  const botUsername = (process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'AnonPaySubBot').replace(/^@/, '')
+  const bot = `https://t.me/${botUsername}`
 
   return (
     <main>

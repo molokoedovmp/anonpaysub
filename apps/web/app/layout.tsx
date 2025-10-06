@@ -1,7 +1,7 @@
 import type  {Metadata}  from 'next'
 import './globals.css'
 
-const supportUrl = 'https://t.me/aibazaru'
+const supportUrl = process.env.NEXT_PUBLIC_SUPPORT_URL || 'https://t.me/aibazaru'
 
 export const metadata: Metadata = {
   title: 'BazarPayBot',

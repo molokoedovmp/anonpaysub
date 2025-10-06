@@ -16,7 +16,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'Публичная оферта — AnonPaySub',
-  description: 'Публичная оферта (пользовательское соглашение) сервиса anonpaysub.ru и Telegram‑бота для оформления подписок.'
+  description: `Публичная оферта (пользовательское соглашение) сервиса ${SITE_DOMAIN || 'сайта'} и Telegram‑бота для оформления подписок.`
 }
 
 export default function OfferPage() {
@@ -75,4 +75,3 @@ export default function OfferPage() {
     </LegalPage>
   )
 }
-
