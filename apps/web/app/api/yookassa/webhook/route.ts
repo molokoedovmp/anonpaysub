@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYooEnv, yooCapturePayment } from '@/lib/yookassa'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { Buffer } from 'buffer'
 
 export const runtime = 'nodejs'
 
@@ -71,4 +72,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 }
-
