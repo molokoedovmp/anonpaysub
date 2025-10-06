@@ -35,12 +35,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // sanitize helper
+    const toStr = (v: any) => (v === undefined || v === null) ? '' : String(v)
+    const clamp = (s: string, max = 128) => s.length > max ? s.slice(0, max) : s
     const metadata: Record<string, any> = {
-      service: order.service,
-      plan: order.plan,
-      login: order.login,
-      password: order.password,
-      creator: order.creatorUrl || order.creator || ''
+      service: clamp(toStr(order.service)),
+      plan: clamp(toStr(order.plan)),
+      login: clamp(toStr(order.login)),
+      password: clamp(toStr(order.password)),
+      creator: clamp(toStr(order.creatorUrl || order.creator || ''))
     }
     try {
       const botToken = process.env.BOT_TOKEN
@@ -55,19 +58,35 @@ export async function POST(req: NextRequest) {
       else if (order?.telegramUser?.id) metadata.userId = String(order.telegramUser.id)
     }
 
-    // description ≤ 128 chars
-    let description = `Подписка ${order.service} (${months} мес.)`
-    if (description.length > 128) description = description.slice(0, 128)
+    // description ≤ 128 chars, no newlines
+    let description = `Подписка ${toStr(order.service)} (${months} мес.)`
+    description = clamp(description.replace(/[\r\n]+/g, ' ').trim(), 128)
+
+    // Build a safe HTTPS return_url
+    function computeReturnUrl() {
+      const raw = (process.env.NEXT_PUBLIC_WEBAPP_URL || '').trim()
+      const fromDomain = (process.env.DOMAIN || '').trim()
+      const sanitize = (u: string) => u
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/+$/, '')
+      const normalize = (s: string) => {
+        const [host, ...rest] = s.split('/')
+        const path = rest.join('/')
+        if (path) return `https://${host}/${path.replace(/^\/+/, '')}`
+        return `https://${host}`
+      }
+      if (raw) return normalize(sanitize(raw))
+      if (fromDomain) return normalize(sanitize(fromDomain) + '/tg')
+      return 'https://t.me'
+    }
+    const returnUrl = computeReturnUrl()
 
     const payload: any = {
       amount: { value: totalRub.toFixed(2), currency: 'RUB' },
       capture: true,
       description,
       metadata,
-      confirmation: {
-        type: 'redirect',
-        return_url: process.env.NEXT_PUBLIC_WEBAPP_URL || 'https://t.me'
-      }
+      confirmation: { type: 'redirect', return_url: returnUrl }
     }
 
     // Receipt
@@ -105,4 +124,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })
   }
 }
-
