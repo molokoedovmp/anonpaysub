@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Buffer } from 'buffer'
-import crypto from 'crypto'
+import { getYooEnv, yooCapturePayment } from '@/lib/yookassa'
 import { sendTelegramMessage } from '@/lib/telegram'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-    const shopId = process.env.YOOKASSA_SHOP_ID
-    const key = process.env.YOOKASSA_KEY
+    const env = getYooEnv()
     const allowNoAuth = process.env.YOOKASSA_WEBHOOK_ALLOW_NO_AUTH === '1'
     const token = process.env.YOOKASSA_WEBHOOK_TOKEN
 
     const auth = req.headers.get('authorization') || ''
     const xToken = req.headers.get('x-auth-token') || ''
-    const expected = 'Basic ' + Buffer.from(`${shopId}:${key}`).toString('base64')
+    const expected = 'Basic ' + Buffer.from(`${env.shopId}:${env.key}`).toString('base64')
     if (!allowNoAuth && !(auth === expected || (token && xToken === token))) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
@@ -24,25 +22,13 @@ export async function POST(req: NextRequest) {
     const obj = body?.object
     if (!event || !obj) return NextResponse.json({ ok: true })
 
-    async function captureIfNeeded() {
-      if (obj?.status === 'waiting_for_capture' || (obj?.status === 'pending' && obj?.paid === true)) {
-        const idem = crypto.randomUUID()
-        const r = await fetch(`https://api.yookassa.ru/v3/payments/${obj.id}/capture`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': expected,
-            'Idempotence-Key': idem
-          },
-          body: JSON.stringify({ amount: obj.amount })
-        })
-        const d = await r.json().catch(() => ({}))
-        return d?.status || obj.status
-      }
-      return obj?.status
+    let finalStatus = obj?.status
+    if (obj?.status === 'waiting_for_capture' || (obj?.status === 'pending' && obj?.paid === true)) {
+      try {
+        const cd = await yooCapturePayment(env, obj.id, obj.amount)
+        if (cd?.status) finalStatus = cd.status
+      } catch {}
     }
-
-    const finalStatus = await captureIfNeeded()
 
     if (finalStatus === 'succeeded') {
       const botToken = process.env.BOT_TOKEN!
@@ -71,7 +57,6 @@ export async function POST(req: NextRequest) {
       }
       await sendTelegramMessage(botToken, adminChatId, payload)
 
-      // Мягкое уведомление клиента сразу после оплаты
       if (md.userId) {
         const userMsg = (
           '✅ Оплата получена!\n' +
@@ -86,3 +71,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 }
+

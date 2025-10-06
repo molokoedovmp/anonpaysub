@@ -26,5 +26,9 @@ export async function fetchUsdRubRate(): Promise<number> {
       lastError = err
     }
   }
+  const fallback = Number(process.env.USD_RUB_RATE_FALLBACK || 0)
+  if (fallback && isFinite(fallback) && fallback > 0) {
+    return fallback
+  }
   throw lastError ?? new Error('rate unavailable')
 }
