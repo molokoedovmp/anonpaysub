@@ -112,13 +112,15 @@ export async function POST(req: NextRequest) {
         },
       ],
     }
-    if (process.env.YOOKASSA_TEST_MODE === '1') payload.test = true
+    const key = process.env.YOOKASSA_KEY || ''
+    if (process.env.YOOKASSA_TEST_MODE === '1' || key.startsWith('test_')) payload.test = true
 
     try {
       const data = await yooCreatePayment(yooEnv, payload)
       return NextResponse.json({ paymentId: data?.id, confirmationUrl: data?.confirmation?.confirmation_url })
     } catch (e: any) {
-      return NextResponse.json({ error: e?.message || 'Ошибка ЮKassa' }, { status: 502 })
+      console.error('yookassa_create_error', e?.yoo || e)
+      return NextResponse.json({ error: e?.message || 'Ошибка ЮKassa', parameter: e?.yoo?.parameter, code: e?.yoo?.code }, { status: 502 })
     }
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })

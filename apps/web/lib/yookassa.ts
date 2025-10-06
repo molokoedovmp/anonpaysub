@@ -42,7 +42,12 @@ export async function yooCreatePayment(env: YooEnv, payload: any, idemKey?: stri
     timeoutMs: 20000
   })
   const data = await safeJson(res)
-  if (!res.ok) throw new Error(data?.description || `YooKassa error ${res.status}`)
+  if (!res.ok) {
+    const msg = data?.description || `YooKassa error ${res.status}`
+    const err: any = new Error(msg)
+    err.yoo = { status: res.status, parameter: (data as any)?.parameter, type: (data as any)?.type, code: (data as any)?.code, response: data }
+    throw err
+  }
   return data
 }
 
@@ -52,7 +57,12 @@ export async function yooGetPayment(env: YooEnv, id: string) {
     timeoutMs: 15000
   })
   const data = await safeJson(res)
-  if (!res.ok) throw new Error(data?.description || `YooKassa error ${res.status}`)
+  if (!res.ok) {
+    const msg = data?.description || `YooKassa error ${res.status}`
+    const err: any = new Error(msg)
+    err.yoo = { status: res.status, parameter: (data as any)?.parameter, type: (data as any)?.type, code: (data as any)?.code, response: data }
+    throw err
+  }
   return data
 }
 
@@ -68,7 +78,12 @@ export async function yooCapturePayment(env: YooEnv, id: string, amount?: any, i
     timeoutMs: 20000
   })
   const data = await safeJson(res)
-  if (!res.ok) throw new Error(data?.description || `YooKassa error ${res.status}`)
+  if (!res.ok) {
+    const msg = data?.description || `YooKassa error ${res.status}`
+    const err: any = new Error(msg)
+    err.yoo = { status: res.status, parameter: (data as any)?.parameter, type: (data as any)?.type, code: (data as any)?.code, response: data }
+    throw err
+  }
   return data
 }
 
@@ -84,4 +99,3 @@ export function cryptoRandomId(): string {
   // Fallback: simple random
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
-
