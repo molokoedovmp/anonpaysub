@@ -107,16 +107,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ paymentId: data?.id, confirmationUrl: data?.confirmation?.confirmation_url })
     } catch (e: any) {
       const debug = process.env.DEBUG_YOOKASSA === '1'
-      const base = { error: e?.message || 'Ошибка ЮKassa', parameter: e?.yoo?.parameter, code: e?.yoo?.code }
+      const undiciCode = e?.cause?.code || e?.code
+      const base: any = { error: e?.message || 'Ошибка ЮKassa', parameter: e?.yoo?.parameter, code: e?.yoo?.code }
+      if (undiciCode === 'UND_ERR_CONNECT_TIMEOUT') {
+        base.error = 'Таймаут подключения к YooKassa'
+        base.hint = 'Проверьте доступ к интернету из контейнера, DNS и firewall. В dev docker-compose включите NODE_OPTIONS=--dns-result-order=ipv4first.'
+        base.causeCode = undiciCode
+      }
       if (debug) {
-        ;(base as any).returnUrl = returnUrl
-        ;(base as any).description = description
-        ;(base as any).amount = payload?.amount?.value
-        ;(base as any).metadataKeys = Object.keys(metadata)
-        ;(base as any).yoo = e?.yoo || null
+        base.returnUrl = returnUrl
+        base.description = description
+        base.amount = payload?.amount?.value
+        base.metadataKeys = Object.keys(metadata)
+        base.yoo = e?.yoo || null
+        if (undiciCode) base.causeCode = undiciCode
       }
       console.error('yookassa_create_error', e?.yoo || e)
-      return NextResponse.json(base as any, { status: 502 })
+      return NextResponse.json(base, { status: 502 })
     }
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })
