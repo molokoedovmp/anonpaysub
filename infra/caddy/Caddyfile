@@ -3,7 +3,8 @@
 
     # Проксирование до Next.js (web) с явными таймаутами —
     # помогает избежать обрывов и "Failed to fetch" при долгих ответах внешних API
-    reverse_proxy web:3000 {
+    # При использовании host‑network проксируем на localhost:3000
+    reverse_proxy 127.0.0.1:3000 {
         transport http {
             dial_timeout              10s
             response_header_timeout   60s
