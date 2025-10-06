@@ -9,6 +9,11 @@ services:
       - NODE_ENV=production
       # Предпочитать IPv4 для DNS‑резолвинга Node.js (снижает риск обрывов/таймаутов)
       - NODE_OPTIONS=--dns-result-order=ipv4first
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       - bot
 
@@ -17,6 +22,11 @@ services:
       context: ./apps/bot
     env_file:
       - ./.env
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   caddy:
     image: caddy:2-alpine
@@ -33,6 +43,11 @@ services:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   caddy_data:

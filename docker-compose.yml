@@ -17,6 +17,11 @@ services:
       - ./apps/web:/app
       - /app/node_modules
     command: sh -c "npm install && npm run dev"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   bot:
     build:
@@ -27,3 +32,8 @@ services:
       - ./apps/bot:/app
     depends_on:
       - web
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
