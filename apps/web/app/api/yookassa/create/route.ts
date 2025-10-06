@@ -19,16 +19,8 @@ export async function POST(req: NextRequest) {
     const months = monthsMap[order?.plan] ?? 1
     const usd = Math.max(0, Number(order?.monthlyPriceUsd || order?.price || 0)) * months
     if (!usd) return NextResponse.json({ error: 'Некорректная сумма' }, { status: 400 })
-    // Получаем курс: сначала пытаемся взять из заказа (если пришёл с клиента),
-    // затем онлайн‑провайдеры; на крайний случай — дефолт 100.
-    let rate = Number(order?.calc?.usdToRub || order?.usdToRub || 0)
-    if (!Number.isFinite(rate) || rate <= 0) {
-      try {
-        rate = await fetchUsdRubRate()
-      } catch {
-        rate = Number(process.env.DEFAULT_FX_RUB || '100') // безопасный запасной вариант
-      }
-    }
+    // Берём актуальный курс с провайдеров (как было раньше)
+    const rate = await fetchUsdRubRate()
     const totalRub = calcRubPrice(usd, { fx: rate })
 
     const metadata: Record<string, any> = {
