@@ -54,10 +54,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Безопасное описание платежа (ограничение ЮKassa ≤ 128 символов)
+    let description = `Подписка ${order.service} (${months} мес.)`
+    if (description.length > 128) description = description.slice(0, 128)
+
     const payload: any = {
       amount: { value: totalRub.toFixed(2), currency: 'RUB' },
       capture: true,
-      description: `Подписка ${order.service} (${months} мес.)`,
+      description,
       metadata,
       confirmation: {
         type: 'redirect',
@@ -65,30 +69,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Для прод-режима ЮKassa часто требуется обязательный чек (receipt) по 54‑ФЗ
-    // Добавляем его, если настроены переменные окружения
-    const taxSystem = process.env.YOOKASSA_TAX_SYSTEM_CODE
-    const vatCode = Number(process.env.YOOKASSA_VAT_CODE || '6') // 6 — без НДС
-    const receiptEmail = process.env.YOOKASSA_RECEIPT_EMAIL
-    const receiptPhone = process.env.YOOKASSA_RECEIPT_PHONE
-    if (taxSystem && (receiptEmail || receiptPhone)) {
-      payload.receipt = {
-        customer: {
-          ...(receiptEmail ? { email: receiptEmail } : {}),
-          ...(receiptPhone ? { phone: receiptPhone } : {}),
+    // Формируем чек (receipt) всегда, с дефолтами (без необходимости настраивать .env)
+    const taxSystem = Number(process.env.YOOKASSA_TAX_SYSTEM_CODE || '1') // ОСН по умолчанию
+    const vatCode = Number(process.env.YOOKASSA_VAT_CODE || '6')          // 6 — без НДС
+    const receiptEmail = process.env.YOOKASSA_RECEIPT_EMAIL || 'aiBazaru@yandex.ru'
+    const rawPhone = process.env.YOOKASSA_RECEIPT_PHONE
+    const normalizedPhone = rawPhone ? String(rawPhone).replace(/\D+/g, '') : undefined
+    payload.receipt = {
+      customer: {
+        email: receiptEmail,
+        ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+      },
+      tax_system_code: taxSystem,
+      items: [
+        {
+          description,
+          amount: { value: totalRub.toFixed(2), currency: 'RUB' },
+          quantity: '1.00',
+          vat_code: vatCode,
+          payment_mode: 'full_prepayment',
+          payment_subject: 'service',
         },
-        tax_system_code: Number(taxSystem),
-        items: [
-          {
-            description: `Подписка ${order.service} (${months} мес.)`,
-            amount: { value: totalRub.toFixed(2), currency: 'RUB' },
-            quantity: '1.00',
-            vat_code: vatCode,
-            payment_mode: 'full_prepayment',
-            payment_subject: 'service',
-          },
-        ],
-      }
+      ],
     }
     if (process.env.YOOKASSA_TEST_MODE === '1') payload.test = true
 
