@@ -11,6 +11,13 @@
         }
     }
 
+    # Логи запросов (помогает понять, доходит ли запрос до web)
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+
     @health {
         path /healthz
     }

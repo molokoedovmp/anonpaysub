@@ -5,6 +5,8 @@ import { verifyWebAppInitData } from '@/lib/telegram'
 import { Buffer } from 'buffer'
 import crypto from 'crypto'
 
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
   try {
     const { initData, order } = await req.json()
