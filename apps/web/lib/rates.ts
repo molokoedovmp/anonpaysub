@@ -1,6 +1,19 @@
+const TIMEOUT_MS = 3000
+
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController()
+  const t = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 const PROVIDERS = [
   async () => {
-    const res = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=RUB', { cache: 'no-store' })
+    const res = await fetchWithTimeout('https://api.exchangerate.host/latest?base=USD&symbols=RUB')
     if (!res.ok) throw new Error('bad status')
     const j = await res.json()
     const rate = j?.rates?.RUB
@@ -8,7 +21,7 @@ const PROVIDERS = [
     throw new Error('no rate')
   },
   async () => {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-store' })
+    const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD')
     if (!res.ok) throw new Error('bad status')
     const j = await res.json()
     const rate = j?.rates?.RUB
