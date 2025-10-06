@@ -89,30 +89,7 @@ export async function POST(req: NextRequest) {
       confirmation: { type: 'redirect', return_url: returnUrl }
     }
 
-    if (process.env.YOOKASSA_RECEIPT_DISABLE !== '1') {
-      const taxSystem = Number(process.env.YOOKASSA_TAX_SYSTEM_CODE || '1')
-      const vatCode = Number(process.env.YOOKASSA_VAT_CODE || '6')
-      const receiptEmail = (process.env.YOOKASSA_RECEIPT_EMAIL || 'noreply@example.com').trim()
-      const rawPhone = process.env.YOOKASSA_RECEIPT_PHONE
-      const normalizedPhone = rawPhone ? String(rawPhone).replace(/\D+/g, '') : undefined
-      payload.receipt = {
-        customer: {
-          ...(receiptEmail ? { email: receiptEmail } : {}),
-          ...(normalizedPhone ? { phone: normalizedPhone } : {}),
-        },
-        tax_system_code: taxSystem,
-        items: [
-          {
-            description,
-            amount: { value: totalRub.toFixed(2), currency: 'RUB' },
-            quantity: '1.00',
-            vat_code: vatCode,
-            payment_mode: 'full_prepayment',
-            payment_subject: 'service',
-          },
-        ],
-      }
-    }
+    // Чек отключён по требованию: не отправляем receipt вообще
     const key = process.env.YOOKASSA_KEY || ''
     if (process.env.YOOKASSA_TEST_MODE === '1' || key.startsWith('test_')) payload.test = true
 
