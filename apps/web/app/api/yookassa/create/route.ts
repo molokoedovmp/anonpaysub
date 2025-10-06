@@ -7,7 +7,12 @@ import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
   try {
+    const startedAt = Date.now()
+    const reqId = crypto.randomUUID()
     const { initData, order } = await req.json()
+    console.log(`[yookassa:create][${reqId}] request`, {
+      service: order?.service, plan: order?.plan, price: order?.monthlyPriceUsd, hasInit: !!initData
+    })
     if (!order) return NextResponse.json({ error: 'order обязателен' }, { status: 400 })
 
     const key = process.env.YOOKASSA_KEY
@@ -30,6 +35,7 @@ export async function POST(req: NextRequest) {
       }
     }
     const totalRub = calcRubPrice(usd, { fx: rate })
+    console.log(`[yookassa:create][${reqId}] calc`, { usd, rate, totalRub })
 
     const metadata: Record<string, any> = {
       service: order.service,
@@ -97,6 +103,8 @@ export async function POST(req: NextRequest) {
     const idem = crypto.randomUUID()
     let data: any = {}
     try {
+      const controller = new AbortController()
+      const to = setTimeout(() => controller.abort(), 15000)
       const res = await fetch('https://api.yookassa.ru/v3/payments', {
         method: 'POST',
         headers: {
@@ -104,19 +112,25 @@ export async function POST(req: NextRequest) {
           'Idempotence-Key': idem,
           Authorization: 'Basic ' + Buffer.from(`${shopId}:${key}`).toString('base64')
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       })
+      clearTimeout(to)
       data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        console.error(`[yookassa:create][${reqId}] yk-error`, data)
         return NextResponse.json({ error: data?.description || 'Ошибка ЮKassa' }, { status: 502 })
       }
     } catch (e: any) {
       // Сетевой сбой до ЮKassa → отдаём понятную ошибку клиенту
+      console.error(`[yookassa:create][${reqId}] fetch-failed`, e?.name, e?.message)
       return NextResponse.json({ error: e?.message || 'Не удалось связаться с ЮKassa' }, { status: 502 })
     }
-
+    const tookMs = Date.now() - startedAt
+    console.log(`[yookassa:create][${reqId}] ok`, { tookMs, paymentId: data?.id })
     return NextResponse.json({ paymentId: data?.id, confirmationUrl: data?.confirmation?.confirmation_url })
   } catch (e: any) {
+    console.error('[yookassa:create] fatal', e)
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })
   }
 }
