@@ -9,6 +9,9 @@ services:
       - NODE_ENV=production
       # Предпочитать IPv4 для DNS‑резолвинга Node.js (снижает риск обрывов/таймаутов)
       - NODE_OPTIONS=--dns-result-order=ipv4first
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     logging:
       driver: json-file
       options:
