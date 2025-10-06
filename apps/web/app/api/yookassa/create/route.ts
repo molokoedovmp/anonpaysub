@@ -106,8 +106,17 @@ export async function POST(req: NextRequest) {
       const data = await yooCreatePayment(yooEnv, payload)
       return NextResponse.json({ paymentId: data?.id, confirmationUrl: data?.confirmation?.confirmation_url })
     } catch (e: any) {
+      const debug = process.env.DEBUG_YOOKASSA === '1'
+      const base = { error: e?.message || 'Ошибка ЮKassa', parameter: e?.yoo?.parameter, code: e?.yoo?.code }
+      if (debug) {
+        ;(base as any).returnUrl = returnUrl
+        ;(base as any).description = description
+        ;(base as any).amount = payload?.amount?.value
+        ;(base as any).metadataKeys = Object.keys(metadata)
+        ;(base as any).yoo = e?.yoo || null
+      }
       console.error('yookassa_create_error', e?.yoo || e)
-      return NextResponse.json({ error: e?.message || 'Ошибка ЮKassa', parameter: e?.yoo?.parameter, code: e?.yoo?.code }, { status: 502 })
+      return NextResponse.json(base as any, { status: 502 })
     }
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })
